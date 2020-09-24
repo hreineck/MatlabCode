@@ -270,4 +270,30 @@ def primetest(n, k=30):
             return False
     return True
 
+def powermod(a,z,n):
+    #Calculates y = a^z mod n
 
+    #take care of negative exponent
+    if (z<0):
+        z = -z
+        return invmodn(a, n)
+
+    x = 1
+    a1 = a
+    z1 = z
+    while z1 != 0:
+        while z1 % 2 == 0:
+            z1 = z1/2
+            a1 = (a1*a1)%n
+        z1 = z1 - 1
+        x = x*a1
+        x = x%n
+    return x
+
+def powermod_many(a,b,n):
+    #this one takes in lists for a and b
+    ret = []
+    for x in a:
+        for y in b:
+            ret.append(powermod(x,y,n))
+    return(ret)
