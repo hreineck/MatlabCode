@@ -1,13 +1,12 @@
 import numpy as np
-from scipy.linalg import circulant
-from sympy.ntheory.factor_ import totient 
+from sympy.ntheory.factor_ import totient as eulerphi
 
 def circmat(v, m):
     '''This function produces a circulant matrix of the type
     that is used in the function lfsrlength'''
     if len(v) < (2 * m - 1):
         raise ValueError("length of vector must be < 2 * m - 1")
-    return circulant(v)
+    return np.array([v[i:i+m] for i in range(m)])
 
 def coinc(txt, n):
     """This function returns the number of matches between txt and txt 
@@ -71,7 +70,8 @@ def invmodn(b, n):
        return None
     else:
        return t % n
-eulerphi = totient
+
+# eulerphi goes here, already defined
 
 def frequency(seq):
     """This function tabulates the amount of times each character 'a'-'z' 
@@ -162,29 +162,27 @@ def lfsr(c, k, n):
     recurrence relation that is governed by the coefficient vector c.
     The initial values of the bits are given by the vector k"""
 
-    y = np.zeros((1,n))
-    c = np.array(c)
-    
+    y = [0 for _ in range(n)]
+    c = np.array([c])
+
     kln = len(k)
     for j in range(n):
-       if j <= kln:
-          y[j] = k[j]
-       else:
-          reg = y[j-kln:j-1]
-          y[j] = (reg * c.T) % 2
+        if j < kln:
+            y[j] = k[j]
+        else:
+            reg = y[j-kln:j]
+            y[j] = np.mod(np.matmul(reg, c.T), 2)[0]
     return y
 
 def lfsrlength(v,n):
     """This function tests the vector v of bits to see if it is generated
     by a linear feedback recurrence of length at most n"""
 
-    print('Order   Determinant')
-    for j in range(n):
+    print('Order\tDeterminant')
+    for j in range(1, n+1):
        M = circmat(v,j)
-       Mdet = np.mod(np.det(np.array(M)),2)
-       print(num2str(double(j)),'        ',num2str(double(Mdet)))
-    end
-    return y
+       Mdet = int(np.mod(np.linalg.det(np.array(M)),2))
+       print(j, Mdet, sep='\t')
 
 def lfsrsolve(v,n):
     """Given a guess n for the length of the recurrence that generates
@@ -198,19 +196,18 @@ def lfsrsolve(v,n):
        raise ValueError('The vector v needs to be atleast length 2n')
 
     M = np.array(circmat(v,n))
-    Mdet = np.det(M)
+    Mdet = np.linalg.det(M)
 
-    x = v[n+2:2*n]
-
-    Minv = np.inv(M)
-    Minv = np.mod(np.round(Minv*Mdet),2)
+    x = np.array(v[n:2*n]).reshape(-1, 1)
+    Minv = np.linalg.inv(M)
+    Minv = np.mod(np.round(Minv*Mdet), 2)
     # A note: Technically, the round() function should never show up, but
     # since Matlab does double precision arithmetic to calculate the inverse matrix
     # we need to bring the result back to integer values so we can perform a meaningful
     # mod operation. As long as this routine is not used on huge examples, it should
     # be ok
 
-    y = np.mod(Minv*x,2);
+    y = np.mod(np.matmul(Minv, x), 2);
     y = y[:].T# Convert the output to a row vector
     return y
 
@@ -270,30 +267,22 @@ def primetest(n, k=30):
             return False
     return True
 
-def powermod(a,z,n):
-    #Calculates y = a^z mod n
+def _powermod_single(a,z,n):
 
     #take care of negative exponent
     if (z<0):
-        z = -z
-        return invmodn(a, n)
+        z *= -z
+        a = invmodn(a, n)
 
-    x = 1
-    a1 = a
-    z1 = z
-    while z1 != 0:
-        while z1 % 2 == 0:
-            z1 = z1/2
-            a1 = (a1*a1)%n
-        z1 = z1 - 1
-        x = x*a1
-        x = x%n
-    return x
+    return pow(a, z, n)
 
-def powermod_many(a,b,n):
+def powermod(a, z, n):
+    """Calculates y = a^z mod n
+If a is a matrix, it calculates a(j,k)^z mod for every element in a"""
+    if isinstance(a, (int, float)):
+        return _powermod_single(a, z, n)
     #this one takes in lists for a and b
     ret = []
     for x in a:
-        for y in b:
-            ret.append(powermod(x,y,n))
+        ret.append(_powermod_single(x, z, n))
     return(ret)
