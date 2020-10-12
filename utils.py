@@ -162,13 +162,16 @@ def lfsr(c, k, n):
     recurrence relation that is governed by the coefficient vector c.
     The initial values of the bits are given by the vector k"""
 
+    kln = len(c)
+    x = k[:kln]
+    print(x)
     y = [0 for _ in range(n)]
     c = np.array([c])
 
-    kln = len(k)
     for j in range(n):
+        print(j)
         if j < kln:
-            y[j] = k[j]
+            y[j] = x[j]
         else:
             reg = y[j-kln:j]
             y[j] = np.mod(np.matmul(reg, c.T), 2)[0]
